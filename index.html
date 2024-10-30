@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup/Login Form</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative; /* Added for stacking context */
+            z-index: 1; /* Ensure container is above background */
+        }
+        .profile-pic {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            margin: 10px 0;
+            align-items: center;
+            position: relative;
+        }
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #5c67f2;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .emoji {
+            font-size: 30px;
+            color: #999;
+        }
+        input {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 80%;
+        }
+        button {
+            padding: 10px;
+            background-color: #5c67f2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 80%;
+        }
+        button:hover {
+            background-color: #4e54e1;
+        }
+        .toggle {
+            margin-top: 15px;
+            cursor: pointer;
+            color: #5c67f2;
+        }
+        .notification {
+            display: none;
+            position: fixed;
+            top: 20px; /* Positioned at the top */
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background-color: #5c67f2; /* Blue color */
+            color: white;
+            border-radius: 20px; /* Circular styling */
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000; /* Ensure notification is above everything else */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Sign Up</h2>
+        
+        <form id="signupForm" onsubmit="return validateAndRedirect();">
+            <div class="file-input-wrapper">
+                <input type="file" name="profile_picture" accept="image/*" onchange="previewImage(event)" required>
+                <img id="profilePicture" src="" alt="Profile Picture" class="profile-pic">
+                <span class="emoji" id="cameraEmoji">📸</span>
+            </div>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Sign Up</button>
+        </form>
+        
+        <div class="toggle" onclick="toggleForms()">Already have an account? Login here.</div>
+
+        <div id="loginForm" style="display: none;">
+            <h2>Login</h2>
+            <form action="https://your-backend-url/login" method="POST">
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <div class="toggle" onclick="toggleForms()">Don't have an account? Sign Up here.</div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        function previewImage(event) {
+            const profilePic = document.getElementById('profilePicture');
+            const cameraEmoji = document.getElementById('cameraEmoji');
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function() {
+                profilePic.src = reader.result;
+                profilePic.style.display = 'block';
+                cameraEmoji.style.display = 'none';
+            }
+            if (file) {
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function toggleForms() {
+            const signupForm = document.getElementById('signupForm');
+            const loginForm = document.getElementById('loginForm');
+            if (signupForm.style.display === "none") {
+                signupForm.style.display = "block";
+                loginForm.style.display = "none";
+            } else {
+                signupForm.style.display = "none";
+                loginForm.style.display = "block";
+            }
+        }
+
+        function validateEmail(email) {
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return regex.test(email);
+        }
+
+        function validateAndRedirect() {
+            const email = document.querySelector('input[name="email"]').value;
+            const username = document.querySelector('input[name="username"]').value;
+            const profilePic = document.getElementById('profilePicture').src;
+            const notification = document.getElementById('notification');
+
+            if (!validateEmail(email)) {
+                notification.innerText = "Invalid email!";
+                notification.style.display = 'flex';
+                return false;
+            }
+
+            localStorage.setItem('username', username);
+            localStorage.setItem('profilePic', profilePic);
+
+            notification.innerText = "Sign-up successful!";
+            notification.style.display = 'flex';
+
+            setTimeout(() => {
+                window.location.href = 'chatfriend.html';
+            }, 3000); // 3 seconds delay
+
+            return false;
+        }
+    </script>
+</body>
+</html>
