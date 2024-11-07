@@ -8,9 +8,9 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            background-color: #f4f4f9;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
         }
         header {
             background-color: #333;
@@ -62,20 +62,30 @@
         <h2>Featured Anime Videos</h2>
         <!-- Example Video Embed -->
         <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/embed/xyz" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     </div>
 
     <!-- Video Upload Form (only visible to admin) -->
     <div class="upload-container">
         <script>
-            const isAdmin = true;  // Only admin (you) can upload videos
+            // Hardcoded admin email
+            const adminEmail = "wargame00101@gmail.com";  // Your email address to be the admin
+            let isAdmin = false; // Default to false
+
+            // Check if the URL includes the admin email to grant access
+            if (window.location.href.includes(adminEmail)) {
+                isAdmin = true; // If the URL contains your admin email, grant access to upload videos
+            }
+
+            // Hide the upload form if the user is not the admin
             const uploadForm = document.querySelector('.upload-form');
             if (!isAdmin) {
-                uploadForm.classList.add('hidden'); // Hide upload form if not admin
+                uploadForm.classList.add('hidden');
             }
         </script>
-        
+
         <div class="upload-form">
-            <p>Upload your own anime video:</p>
+            <p>Upload a new anime video:</p>
             <input type="file" id="videoUpload" accept="video/*">
             <button class="upload-button" onclick="uploadVideo()">Upload Video</button>
         </div>
@@ -84,7 +94,11 @@
 
 <script>
     function uploadVideo() {
-        alert("Only the admin (you) can upload videos. This feature is restricted for others.");
+        if (isAdmin) {
+            alert("Video uploaded successfully! (This is a simulation; no actual upload happens without backend support.)");
+        } else {
+            alert("Only the admin (you) can upload videos.");
+        }
     }
 </script>
 
