@@ -3,104 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Videos</title>
+    <title>Video Upload Page</title>
     <style>
+        /* Basic styling */
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f4f4f9;
             margin: 0;
             padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
         }
-        header {
-            background-color: #333;
-            color: white;
-            padding: 10px 0;
-        }
+
         .container {
-            max-width: 800px;
-            margin: 20px auto;
+            text-align: center;
         }
-        .video-container {
-            margin: 20px 0;
-        }
-        .video-container iframe {
-            width: 100%;
-            height: 400px;
-        }
-        .upload-container {
+
+        #uploadForm {
+            display: none; /* Initially hidden, only admin can see it */
             margin-top: 20px;
         }
-        .upload-container input[type="file"] {
-            display: none;
+
+        video {
+            max-width: 100%;
+            margin-top: 20px;
+            border-radius: 8px;
         }
-        .upload-button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .upload-container p {
-            font-size: 18px;
-            color: #333;
-        }
-        .hidden {
-            display: none;
+
+        #errorMessage {
+            color: red;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>Video Upload Site</h1>
 
-<header>
-    <h1>Welcome to Anime Videos</h1>
-</header>
-
-<div class="container">
-    <div class="video-container">
-        <h2>Featured Anime Videos</h2>
-        <!-- Example Video Embed -->
-        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        <iframe src="https://www.youtube.com/embed/xyz" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-    </div>
-
-    <!-- Video Upload Form (only visible to admin) -->
-    <div class="upload-container">
-        <script>
-            // Hardcoded admin email
-            const adminEmail = "wargame00101@gmail.com";  // Your email address to be the admin
-            let isAdmin = false; // Default to false
-
-            // Check if the URL includes the admin email to grant access
-            if (window.location.href.includes(adminEmail)) {
-                isAdmin = true; // If the URL contains your admin email, grant access to upload videos
-            }
-
-            // Hide the upload form if the user is not the admin
-            const uploadForm = document.querySelector('.upload-form');
-            if (!isAdmin) {
-                uploadForm.classList.add('hidden');
-            }
-        </script>
-
-        <div class="upload-form">
-            <p>Upload a new anime video:</p>
-            <input type="file" id="videoUpload" accept="video/*">
-            <button class="upload-button" onclick="uploadVideo()">Upload Video</button>
+        <!-- Upload Form (hidden for non-admins) -->
+        <div id="uploadForm">
+            <h2>Upload Your Video</h2>
+            <input type="file" id="videoInput" accept="video/*">
+            <button onclick="uploadVideo()">Upload Video</button>
         </div>
+
+        <!-- Error Message for non-admins -->
+        <div id="errorMessage"></div>
+
+        <!-- Display Uploaded Videos -->
+        <h2>Videos:</h2>
+        <div id="videoContainer"></div>
+
+        <!-- Firebase SDK -->
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+
+        <script>
+            // Firebase Config (Your provided config)
+            const firebaseConfig = {
+                apiKey: "AIzaSyCLZnKFOu0DX70md1KEp2uD0T0zXJ5rZhY",
+                authDomain: "kako-f0553.firebaseapp.com",
+                databaseURL: "https://kako-f0553-default-rtdb.firebaseio.com",
+                projectId: "kako-f0553",
+                storageBucket: "kako-f0553.firebasestorage.app",
+                messagingSenderId: "992976907062",
+                appId: "1:992976907062:web:d8551001da313f62332197",
+                measurementId: "G-XYZYTTGD7V"
+            };
+
+            // Initialize Firebase
+            const app = firebase.initializeApp(firebaseConfig);
+            const storage = firebase.storage();
+
+            // Admin email
+            const adminEmail = 'wargame00101@gmail.com';
+
+            // Check URL for email parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const email = urlParams.get('email');
+
+            // Show the upload form only for the admin
+            if (email === adminEmail) {
+                document.getElementById('uploadForm').style.display = 'block';
+            } else {
+                document.getElementById('errorMessage').innerText = 'You are not authorized to upload videos.';
+            }
+
+            // Upload video function
+            function uploadVideo() {
+                const videoFile = document.getElementById('videoInput').files[0];
+                if (videoFile) {
+                    const storageRef = storage.ref('videos/' + videoFile.name);
+                    storageRef.put(videoFile).then((snapshot) => {
+                        alert('Video uploaded successfully!');
+                        // Optionally, add the video URL to the page
+                        displayUploadedVideo(videoFile.name);
+                    }).catch((error) => {
+                        alert('Error uploading video: ' + error.message);
+                    });
+                } else {
+                    alert('No video selected');
+                }
+            }
+
+            // Display uploaded video on the page
+            function displayUploadedVideo(videoName) {
+                const videoRef = storage.ref('videos/' + videoName);
+                videoRef.getDownloadURL().then((url) => {
+                    const videoElement = document.createElement('video');
+                    videoElement.src = url;
+                    videoElement.controls = true;
+                    document.getElementById('videoContainer').appendChild(videoElement);
+                }).catch((error) => {
+                    alert('Error fetching video: ' + error.message);
+                });
+            }
+
+            // Fetch and display all uploaded videos when the page loads
+            window.onload = function() {
+                const videosRef = storage.ref('videos');
+                videosRef.listAll().then((res) => {
+                    res.items.forEach((itemRef) => {
+                        itemRef.getDownloadURL().then((url) => {
+                            const videoElement = document.createElement('video');
+                            videoElement.src = url;
+                            videoElement.controls = true;
+                            document.getElementById('videoContainer').appendChild(videoElement);
+                        }).catch((error) => {
+                            console.error('Error fetching video: ' + error.message);
+                        });
+                    });
+                });
+            };
+        </script>
     </div>
-</div>
-
-<script>
-    function uploadVideo() {
-        if (isAdmin) {
-            alert("Video uploaded successfully! (This is a simulation; no actual upload happens without backend support.)");
-        } else {
-            alert("Only the admin (you) can upload videos.");
-        }
-    }
-</script>
-
 </body>
 </html>
