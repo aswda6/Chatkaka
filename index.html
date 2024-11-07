@@ -3,141 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Upload Page</title>
+    <title>Admin-Only Post</title>
     <style>
-        /* Basic styling */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             background-color: #f4f4f4;
         }
-
         .container {
+            width: 80%;
+            margin: 0 auto;
+            padding-top: 20px;
+        }
+        h1 {
             text-align: center;
+            color: #333;
         }
-
-        #uploadForm {
-            display: none; /* Initially hidden, only admin can see it */
+        .post-button {
             margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: none; /* Hidden by default */
         }
-
-        video {
-            max-width: 100%;
+        .post-content {
             margin-top: 20px;
-            border-radius: 8px;
-        }
-
-        #errorMessage {
-            color: red;
-            margin-top: 20px;
+            padding: 10px;
+            background-color: #e2e2e2;
+            border-radius: 5px;
+            display: none; /* Hidden until post is made */
         }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>Video Upload Site</h1>
+        <h1>Welcome to the Admin-Only Website</h1>
 
-        <!-- Upload Form (hidden for non-admins) -->
-        <div id="uploadForm">
-            <h2>Upload Your Video</h2>
-            <input type="file" id="videoInput" accept="video/*">
-            <button onclick="uploadVideo()">Upload Video</button>
+        <!-- Post Button (Visible only to admin) -->
+        <button class="post-button" id="postButton" onclick="postContent()">Post Content</button>
+
+        <!-- Content Area for Admin -->
+        <div class="post-content" id="postContent">
+            <h2>Your Content is Posted!</h2>
+            <p>This is a placeholder for the content you post.</p>
         </div>
-
-        <!-- Error Message for non-admins -->
-        <div id="errorMessage"></div>
-
-        <!-- Display Uploaded Videos -->
-        <h2>Videos:</h2>
-        <div id="videoContainer"></div>
-
-        <!-- Firebase SDK -->
-        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
-
-        <script>
-            // Firebase Config (Your provided config)
-            const firebaseConfig = {
-                apiKey: "AIzaSyCLZnKFOu0DX70md1KEp2uD0T0zXJ5rZhY",
-                authDomain: "kako-f0553.firebaseapp.com",
-                databaseURL: "https://kako-f0553-default-rtdb.firebaseio.com",
-                projectId: "kako-f0553",
-                storageBucket: "kako-f0553.firebasestorage.app",
-                messagingSenderId: "992976907062",
-                appId: "1:992976907062:web:d8551001da313f62332197",
-                measurementId: "G-XYZYTTGD7V"
-            };
-
-            // Initialize Firebase
-            const app = firebase.initializeApp(firebaseConfig);
-            const storage = firebase.storage();
-
-            // Admin email
-            const adminEmail = 'wargame00101@gmail.com';
-
-            // Check URL for email parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            const email = urlParams.get('email');
-
-            // Show the upload form only for the admin
-            if (email === adminEmail) {
-                document.getElementById('uploadForm').style.display = 'block';
-            } else {
-                document.getElementById('errorMessage').innerText = 'You are not authorized to upload videos.';
-            }
-
-            // Upload video function
-            function uploadVideo() {
-                const videoFile = document.getElementById('videoInput').files[0];
-                if (videoFile) {
-                    const storageRef = storage.ref('videos/' + videoFile.name);
-                    storageRef.put(videoFile).then((snapshot) => {
-                        alert('Video uploaded successfully!');
-                        // Optionally, add the video URL to the page
-                        displayUploadedVideo(videoFile.name);
-                    }).catch((error) => {
-                        alert('Error uploading video: ' + error.message);
-                    });
-                } else {
-                    alert('No video selected');
-                }
-            }
-
-            // Display uploaded video on the page
-            function displayUploadedVideo(videoName) {
-                const videoRef = storage.ref('videos/' + videoName);
-                videoRef.getDownloadURL().then((url) => {
-                    const videoElement = document.createElement('video');
-                    videoElement.src = url;
-                    videoElement.controls = true;
-                    document.getElementById('videoContainer').appendChild(videoElement);
-                }).catch((error) => {
-                    alert('Error fetching video: ' + error.message);
-                });
-            }
-
-            // Fetch and display all uploaded videos when the page loads
-            window.onload = function() {
-                const videosRef = storage.ref('videos');
-                videosRef.listAll().then((res) => {
-                    res.items.forEach((itemRef) => {
-                        itemRef.getDownloadURL().then((url) => {
-                            const videoElement = document.createElement('video');
-                            videoElement.src = url;
-                            videoElement.controls = true;
-                            document.getElementById('videoContainer').appendChild(videoElement);
-                        }).catch((error) => {
-                            console.error('Error fetching video: ' + error.message);
-                        });
-                    });
-                });
-            };
-        </script>
     </div>
+
+    <script>
+        // Admin email
+        const adminEmail = "wargame00101@gmail.com"; // Your email
+
+        // Simulate the logged-in user's email (In production, this would be retrieved securely)
+        const loggedInEmail = "wargame00101@gmail.com"; // Replace with the actual logged-in email
+
+        // Show the Post button only if the logged-in email matches the admin email
+        if (loggedInEmail === adminEmail) {
+            document.getElementById("postButton").style.display = "inline-block";
+        }
+
+        // Function to handle the content posting
+        function postContent() {
+            // Post content will be shown after the button is clicked
+            document.getElementById("postContent").style.display = "block";
+        }
+    </script>
+
 </body>
 </html>
