@@ -1,73 +1,296 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ckb">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Upload</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>گالێری وێنە - بارکردنی وێنە</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-storage-compat.js"></script>
+    
     <style>
-        .video-box {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #000; font-family: system-ui; direction: rtl; }
+        
+        .menu-toggle {
+            position: fixed; top: 25px; left: 30px; z-index: 1000;
+            cursor: pointer; background: rgba(20,20,30,0.85); backdrop-filter: blur(10px);
+            padding: 14px 18px; border-radius: 12px; border: 1px solid rgba(255,215,0,0.3);
         }
-        .video-box video {
-            width: 320px;
-            height: 240px;
-            border: 2px solid #ccc;
+        .bar { display: block; width: 28px; height: 3px; margin: 6px 0; background-color: #ffd700; transition: 0.3s; }
+        .menu-toggle.active .bar:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .menu-toggle.active .bar:nth-child(2) { opacity: 0; }
+        .menu-toggle.active .bar:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+        
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 998;
+            opacity: 0; visibility: hidden; transition: 0.3s;
+        }
+        .overlay.active { opacity: 1; visibility: visible; }
+        
+        .side-menu {
+            position: fixed; top: 0; left: -300px; width: 300px; height: 100%;
+            background: linear-gradient(145deg, #0c0c14 0%, #14141f 100%); z-index: 999;
+            transition: 0.3s; padding-top: 100px; border-right: 1px solid rgba(255,215,0,0.3);
+        }
+        .side-menu.active { left: 0; }
+        .side-menu ul { list-style: none; padding: 0 25px; }
+        .side-menu li { margin: 20px 0; opacity: 0; transform: translateX(-30px); transition: all 0.3s ease; transition-delay: calc(0.07s * var(--i, 0)); }
+        .side-menu.active li { opacity: 1; transform: translateX(0); }
+        .side-menu li:nth-child(1) { --i: 1; }
+        .side-menu li:nth-child(2) { --i: 2; }
+        .side-menu li:nth-child(3) { --i: 3; }
+        .side-menu li:nth-child(4) { --i: 4; }
+        .side-menu li:nth-child(5) { --i: 5; }
+        .side-menu li a {
+            color: #f0f0f0; text-decoration: none; font-size: 1.2rem; font-weight: 600;
+            display: flex; align-items: center; gap: 18px; padding: 12px 20px;
+            border-radius: 14px; background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,215,0,0.1); transition: 0.25s; cursor: pointer;
+        }
+        .side-menu li a:hover { background: rgba(255,215,0,0.12); border-color: rgba(255,215,0,0.5); transform: translateX(8px); color: #ffd700; }
+        .menu-icon { font-size: 1.5rem; width: 40px; }
+        
+        .admin-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #1a1a2e; padding: 35px; border-radius: 20px; z-index: 2000;
+            width: 350px; text-align: center; border: 2px solid #ffd700;
+            display: none; flex-direction: column; gap: 15px;
+        }
+        .admin-modal.active { display: flex; }
+        .admin-modal h3 { color: #ffd700; }
+        .admin-modal input { padding: 12px; border-radius: 10px; border: 1px solid #333; background: #0f0f1a; color: white; }
+        .admin-modal button { background: #ffd700; color: black; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .admin-modal .close-btn { background: #333; color: white; }
+        .error-msg { color: #ff6b6b; font-size: 0.8rem; }
+        
+        .upload-area {
+            display: none; background: #1a1a2e; margin: 20px; padding: 25px;
+            border-radius: 15px; border: 1px solid #ffd700; text-align: center;
+        }
+        .upload-area.active { display: block; }
+        .upload-area button { background: #ffd700; color: black; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; margin-top: 10px; }
+        .upload-area input { margin: 10px 0; }
+        
+        .gallery-image { width: 100%; height: auto; aspect-ratio: 1920 / 1440; object-fit: cover; }
+        .separator-line { height: 2px; background: linear-gradient(90deg, #333, #ffd70030, #333); }
+        .address-top-right { position: absolute; top: 30px; right: 30px; color: white; text-shadow: 0 1px 4px black; }
+        .bottom-left { position: absolute; bottom: 30px; left: 30px; color: white; text-shadow: 0 1px 4px black; }
+        .phone-number { font-size: 1.2rem; font-weight: bold; }
+        .social-icons { display: flex; gap: 15px; margin-top: 8px; }
+        .social-icon { color: white; text-decoration: none; }
+        .image-block { position: relative; width: 100%; }
+        @media (max-width: 800px) {
+            .address-top-right { font-size: 0.7rem; top: 15px; right: 15px; }
+            .bottom-left { bottom: 15px; left: 15px; }
+            .phone-number { font-size: 0.8rem; }
         }
     </style>
 </head>
 <body>
 
-    <h2>Upload and View Video</h2>
+<div class="menu-toggle" id="menuToggle">
+    <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+</div>
+<div class="overlay" id="overlay"></div>
 
-    <!-- Video Upload Form -->
-    <input type="file" id="videoInput" accept="video/*">
-    <button onclick="uploadVideo()">Upload Video</button>
+<div class="side-menu" id="sideMenu">
+    <ul>
+        <li><a href="#"><span class="menu-icon">🏛️</span> سەرەکی</a></li>
+        <li><a href="#"><span class="menu-icon">🖼️</span> وێنەکان</a></li>
+        <li><a href="#" id="adminPanelBtn"><span class="menu-icon">👑</span> پانێڵی ئەدمین</a></li>
+        <li><a href="#"><span class="menu-icon">🔐</span> Sign Up / Sign In</a></li>
+        <li><a href="#"><span class="menu-icon">📞</span> پەیوەندی</a></li>
+    </ul>
+</div>
 
-    <h3>Uploaded Videos:</h3>
-    <div id="videoBox" class="video-box">
-        <!-- Uploaded videos will appear here -->
-    </div>
+<div class="admin-modal" id="adminModal">
+    <h3>👑 چوونەژوورەوەی ئەدمین</h3>
+    <input type="email" id="adminEmail" placeholder="ئیمەیڵ">
+    <input type="password" id="adminPassword" placeholder="پاسوۆرد">
+    <div class="error-msg" id="loginError"></div>
+    <button id="loginSubmit">چوونەژوورەوە</button>
+    <button class="close-btn" id="closeAdminModal">داخستن</button>
+</div>
 
-    <script>
-        function uploadVideo() {
-            // Get the file input element
-            const fileInput = document.getElementById("videoInput");
-            const videoBox = document.getElementById("videoBox");
+<div class="upload-area" id="uploadArea">
+    <h3 style="color:#ffd700">📤 بارکردنی وێنەی نوێ</h3>
+    <input type="file" id="imageFile" accept="image/*">
+    <button id="uploadImageBtn">✨ بارکردنی وێنە</button>
+    <div id="uploadProgress" style="color:white; margin-top:10px;"></div>
+</div>
 
-            // Get the file from the input
-            const videoFile = fileInput.files[0];
+<div class="gallery-container" id="galleryContainer">
+    <div style="color:white; text-align:center; padding:50px;">وێنەکان بار دەبن...</div>
+</div>
 
-            // Check if a file is selected
-            if (videoFile) {
-                // Create a video element
-                const videoElement = document.createElement("video");
-                videoElement.setAttribute("width", "320");
-                videoElement.setAttribute("height", "240");
-                videoElement.setAttribute("controls", "true");
+<script>
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyAMwWDq6dJL0-oiLHMsYjPJI--EXUuILlo",
+        authDomain: "wood-world-7e784.firebaseapp.com",
+        databaseURL: "https://wood-world-7e784-default-rtdb.firebaseio.com",
+        projectId: "wood-world-7e784",
+        storageBucket: "wood-world-7e784.firebasestorage.app",
+        messagingSenderId: "209688529219",
+        appId: "1:209688529219:web:9c53fb77d8bcda57d607f6",
+        measurementId: "G-LJ384C0XE0"
+    };
 
-                // Create a URL for the video file
-                const videoURL = URL.createObjectURL(videoFile);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
 
-                // Set the source of the video
-                const sourceElement = document.createElement("source");
-                sourceElement.setAttribute("src", videoURL);
-                sourceElement.setAttribute("type", "video/mp4");
+    // زانیاری پێشوەختە بۆ هەموو وێنەکان (تۆ دەتوانیت ئەمە بگۆڕیت بە ویستی خۆت)
+    const DEFAULT_IMAGE_DATA = {
+        phone: "+964 750 739 96 36",
+        telegram: "https://t.me/woodworld",
+        whatsapp: "https://wa.me/9647507399636",
+        address: "اربیل کەسنەزان",
+        email: "woodworld@example.com"
+    };
 
-                // Append the source to the video element
-                videoElement.appendChild(sourceElement);
+    let isAdmin = false;
 
-                // Add the video element to the video box
-                videoBox.appendChild(videoElement);
+    // ========== ئەدمین ==========
+    document.getElementById('adminPanelBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('adminModal').classList.add('active');
+        closeMenu();
+    });
 
-                // Clear the file input
-                fileInput.value = '';
-            } else {
-                alert("Please select a video file to upload.");
-            }
+    document.getElementById('closeAdminModal').addEventListener('click', () => {
+        document.getElementById('adminModal').classList.remove('active');
+    });
+
+    document.getElementById('loginSubmit').addEventListener('click', () => {
+        const email = document.getElementById('adminEmail').value.trim();
+        const pass = document.getElementById('adminPassword').value;
+        if (email === "b99ahmad99@gmail.com" && pass === "admin123") {
+            isAdmin = true;
+            document.getElementById('adminModal').classList.remove('active');
+            document.getElementById('uploadArea').classList.add('active');
+            alert('✅ بەخێربێیت ئەدمین! وێنەکە هەڵبژێرە بۆ بارکردن.');
+        } else {
+            document.getElementById('loginError').innerText = 'ئیمەیڵ یان پاسوۆرد هەڵەیە!';
         }
-    </script>
+    });
 
+    // ========== بارکردنی وێنە بۆ Firebase Storage + Firestore ==========
+    document.getElementById('uploadImageBtn').addEventListener('click', async () => {
+        if (!isAdmin) {
+            alert('تەنها ئەدمین دەتوانێت وێنە باربکات!');
+            return;
+        }
+        
+        const file = document.getElementById('imageFile').files[0];
+        if (!file) {
+            alert('تکایە وێنەیەک هەڵبژێرە!');
+            return;
+        }
+
+        const progressDiv = document.getElementById('uploadProgress');
+        progressDiv.innerHTML = 'بارکردن... 🔄';
+        
+        try {
+            // دروستکردنی ناوی تایبەت بۆ وێنەکە
+            const fileName = Date.now() + '_' + file.name;
+            const storageRef = storage.ref('gallery/' + fileName);
+            
+            // بارکردنی وێنە بۆ Storage
+            await storageRef.put(file);
+            const imageUrl = await storageRef.getDownloadURL();
+            
+            // پاشەکەوتکردنی زانیاری وێنە لە Firestore (بە زانیاری پێشوەختە)
+            await db.collection("galleryImages").add({
+                src: imageUrl,
+                phone: DEFAULT_IMAGE_DATA.phone,
+                telegram: DEFAULT_IMAGE_DATA.telegram,
+                whatsapp: DEFAULT_IMAGE_DATA.whatsapp,
+                address: DEFAULT_IMAGE_DATA.address,
+                email: DEFAULT_IMAGE_DATA.email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            progressDiv.innerHTML = '✅ وێنەکە بە سەرکەوتوویی بارکرا!';
+            document.getElementById('imageFile').value = '';
+            loadImages();
+            
+            setTimeout(() => { progressDiv.innerHTML = ''; }, 3000);
+        } catch (error) {
+            console.error("هەڵە:", error);
+            progressDiv.innerHTML = '❌ هەڵە ڕوویدا!';
+        }
+    });
+
+    // ========== بارکردنی وێنەکان لە Firestore ==========
+    async function loadImages() {
+        const container = document.getElementById('galleryContainer');
+        container.innerHTML = '<div style="color:white; text-align:center; padding:50px;">وێنەکان بار دەبن...</div>';
+        
+        try {
+            const querySnapshot = await db.collection("galleryImages").orderBy("createdAt", "desc").get();
+            
+            if (querySnapshot.empty) {
+                container.innerHTML = '<div style="color:white; text-align:center; padding:50px;">هیچ وێنەیەک نەدۆزرایەوە.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const img = doc.data();
+                const block = document.createElement('div');
+                block.className = 'image-block';
+                
+                const imgEl = document.createElement('img');
+                imgEl.src = img.src;
+                imgEl.className = 'gallery-image';
+                imgEl.onerror = () => { imgEl.src = "https://placehold.co/1920x1440/333/white?text=وێنه+نیه"; };
+                
+                const addressDiv = document.createElement('div');
+                addressDiv.className = 'address-top-right';
+                addressDiv.innerHTML = `<div>📍 ${img.address}</div><div style="font-size:0.8rem;">✉️ ${img.email}</div>`;
+                
+                const bottomDiv = document.createElement('div');
+                bottomDiv.className = 'bottom-left';
+                bottomDiv.innerHTML = `
+                    <div class="phone-number">📞 ${img.phone}</div>
+                    <div class="social-icons">
+                        <a href="${img.telegram}" target="_blank" class="social-icon">✈️ تێلیگرام</a>
+                        <a href="${img.whatsapp}" target="_blank" class="social-icon">💚 واتساپ</a>
+                    </div>
+                `;
+                
+                block.appendChild(imgEl);
+                block.appendChild(addressDiv);
+                block.appendChild(bottomDiv);
+                container.appendChild(block);
+                
+                const line = document.createElement('div');
+                line.className = 'separator-line';
+                container.appendChild(line);
+            });
+        } catch (error) {
+            console.error("هەڵە:", error);
+            container.innerHTML = '<div style="color:red; text-align:center; padding:50px;">هەڵە لە بارکردنی وێنەکان</div>';
+        }
+    }
+
+    // ========== مینو ==========
+    const menuToggle = document.getElementById('menuToggle');
+    const sideMenu = document.getElementById('sideMenu');
+    const overlay = document.getElementById('overlay');
+    
+    function closeMenu() { sideMenu.classList.remove('active'); overlay.classList.remove('active'); menuToggle.classList.remove('active'); }
+    function openMenu() { sideMenu.classList.add('active'); overlay.classList.add('active'); menuToggle.classList.add('active'); }
+    
+    menuToggle.addEventListener('click', () => { if (sideMenu.classList.contains('active')) closeMenu(); else openMenu(); });
+    overlay.addEventListener('click', closeMenu);
+    
+    loadImages();
+</script>
 </body>
 </html>
